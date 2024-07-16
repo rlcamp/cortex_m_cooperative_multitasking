@@ -2,8 +2,8 @@
 #include "cortex_m_cooperative_multitasking.h"
 #include <stddef.h>
 
-/* the below two macros are copied and pasted as-is from https://github.com/rlcamp/coroutine
- and assume a springboard function which takes a single void pointer as an argument */
+/* the below macros are copied and pasted as-is from https://github.com/rlcamp/coroutine
+ and assume a springboard function which takes a single void pointer */
 
 #if __thumb__
 #define SET_LSB_IN_LR_IF_THUMB "orr lr, #1\n"
@@ -46,7 +46,7 @@ SET_LSB_IN_LR_IF_THUMB /* handle thumb addressing where the lsb is set if the ju
  parent when calling the parameter-free yield. */
 static void * context_of_current_child = NULL;
 
-/* main function should set up a linked list with this pointing at its head */
+/* a singly-linked list of active child tasks */
 static struct child_context * children_head = NULL;
 
 void yield(void) {
@@ -56,7 +56,7 @@ void yield(void) {
         context_of_current_child = NULL;
         SWAP_CONTEXT(context);
     } else {
-        /* only sleep when yielding from the parent */
+        /* when yielding from parent, sleep until the next event (i.e. interrupt) */
         sleep_until_event();
 
         /* loop over children, yielding to each, and removing any that have finished */
@@ -91,7 +91,7 @@ void child_start(struct child_context * child, void (* func)(void)) {
     BOOTSTRAP_CONTEXT(child->context, springboard);
 
     if (child->func) {
-        /* if child finished without ever yielding, do not add to list */
+        /* if child returned without ever yielding, do not add to list */
         child->next = children_head;
         children_head = child;
     }
