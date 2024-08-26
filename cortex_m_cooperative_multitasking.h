@@ -22,3 +22,6 @@ int child_is_running(struct child_context * child);
 
 /* caller must provide this function, which is expected to __DSB(); __WFE(); or equivalent */
 extern void sleep_until_event(void);
+
+/* returns an opaque identifier which can be used in comparisons */
+void * current_task(void);

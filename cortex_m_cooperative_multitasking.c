@@ -100,3 +100,7 @@ void child_start(struct child_context * child, void (* func)(void)) {
 int child_is_running(struct child_context * child) {
     return child->func != NULL;
 }
+
+void * current_task(void) {
+    return context_of_current_child;
+}
