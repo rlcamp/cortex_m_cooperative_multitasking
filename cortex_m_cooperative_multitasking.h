@@ -11,7 +11,11 @@ struct child_context {
 
 /* any call site in parent or children can loop on calls to this when waiting for some
  condition to be true, as long as that condition is accompanied by an interrupt or other
- event which would wake the processor from WFE */
+ event which would wake the processor from WFE. if the latter condition is not true, a
+ call site can loop on "while (!condition) { __SEV(); yield(); }" in order to inhibit the
+ call to WFE within yield, thereby effectively causing the whole chip to spinloop on all
+ waited-for conditions without sleeping. this should be used sparingly due to increased
+ power consumption, but allows other threads to continue to make progress in more cases */
 void yield(void);
 
 /* parent calls this to start a child */

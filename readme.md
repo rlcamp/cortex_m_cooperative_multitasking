@@ -16,6 +16,8 @@ Child tasks are started by the main thread on demand. Once started, the main thr
 
 In order to ensure timely response to conditions becoming true, tasks must only call `yield()` in a loop around a condition that will be accompanied by a processor wake. Waiting for a condition not accompanied by a processor wake can delay response to the condition by an extra sleep-wake cycle, where the timing of the sleep-wake cycles is solely determined by conditions being waited upon by other tasks. If no tasks are waiting for interrupt-accompanied conditions, the processor may sleep indefinitely.
 
+If a condition needs to be waited upon that is not accompanied by an interrupt when it becomes true, a call site can loop on `while (!condition) { __SEV(); yield(); }` in order to inhibit the call to WFE within `yield()`, thereby effectively causing the whole chip to spinloop on all waited-for conditions without sleeping. This should be used sparingly due to increased power consumption, but allows other threads to continue to make progress in cases where they would otherwise be blocked indefinitely.
+
 ## License
 
 ISC license.
