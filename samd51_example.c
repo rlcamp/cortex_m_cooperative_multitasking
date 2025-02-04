@@ -139,12 +139,6 @@ static unsigned get_ticks(void) {
     return *(volatile unsigned *)&ticks;
 }
 
-void sleep_until_event(void) {
-    /* this is called by yield() whenever it wants to sleep the processor */
-    __DSB();
-    __WFE();
-}
-
 /* utility function of the type that is almost always a code smell, but is less dumb in
  this context because it doesn't block other cooperative tasks */
 static void delay(unsigned long ticks_to_wait) {

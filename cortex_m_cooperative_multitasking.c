@@ -70,6 +70,11 @@ void yield(void) {
     }
 }
 
+/* application MAY override this if desired */
+__attribute((weak)) void sleep_until_event(void) {
+    asm volatile("dsb; wfe" :::);
+}
+
 __attribute((noreturn)) static void springboard(void * argv) {
     struct child_context * child = argv;
     /* set this so that when either parent or child call the parameter-free yield, it

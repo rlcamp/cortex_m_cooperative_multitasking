@@ -24,7 +24,7 @@ void child_start(struct child_context * child, void (* func)(void));
 /* parent can call this to determine whether an already-started child is still running */
 int child_is_running(struct child_context * child);
 
-/* caller must provide this function, which is expected to __DSB(); __WFE(); or equivalent */
+/* application MAY override this at link time, it is expected to call __DSB(); __WFE(); */
 extern void sleep_until_event(void);
 
 /* returns an opaque identifier which can be used in comparisons */
