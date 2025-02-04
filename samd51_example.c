@@ -6,29 +6,6 @@
 
 #include "cortex_m_cooperative_multitasking.h"
 
-/* optional sram reduction, should work on any cortex-m */
-static void decouple_handlers_from_program_stack(void) {
-    /* call this function before any stack switching to ensure that interrupt handlers get
-     their own single dedicated call stack, rather than each child stack needing to have
-     enough extra headroom to support running the largest interrupt handler. this can
-     significantly reduce the total amount of sram required to dedicate to call stacks on
-     an embedded processor. call this the beginning of main(), or setup() in arduino code.
-     should work on all cortex-m processors. you still need to make sure task stacks have
-     at least 104 extra bytes for register storage (less if no FPU or not using it) */
-    static char handler_stack[2048] __attribute((aligned(8)));
-    asm volatile("cpsid i\n" /* disable irq */
-                 "mrs r0, msp\n" /* assuming we are in thread mode using msp, copy current sp */
-                 "msr psp, r0\n" /* and store it in psp */
-                 "mrs r0, control\n" /* get value of control register */
-                 "mov r1, #2\n" /* must be done in two insns because of thumb restrictions */
-                 "orr r0, r1\n" /* set bit 1 of control register, to use psp in thread mode */
-                 "msr control, r0\n" /* store modified value in control register */
-                 "isb\n" /* memory barrier after switching stacks */
-                 "msr msp, %0\n" /* set handler stack pointer to top of handler stack */
-                 "cpsie i\n" /* enable irq */
-                 : : "r"(handler_stack + sizeof(handler_stack)) : "r0", "r1");
-}
-
 /* begin samd51-specific stuff */
 
 #if __has_include(<samd51.h>)
@@ -176,9 +153,7 @@ static void child_c_func(void) {
 }
 
 int main(void) {
-    /* this is OPTIONAL, but worth it if there are 2 or more child stacks */
-    decouple_handlers_from_program_stack();
-
+    /* these need not actually be static but the linker can warn us about stuff if they are */
     static struct __attribute((aligned(8))) {
         /* needs to be enough to accommodate the deepest call stack needed by any functions
          called in the child, PLUS any interrupt handlers IF we are not using the msp/psp
