@@ -183,7 +183,7 @@ int main(void) {
         /* needs to be enough to accommodate the deepest call stack needed by any functions
          called in the child, PLUS any interrupt handlers IF we are not using the msp/psp
          switch to provide interrupt handlers with their own dedicated call stack */
-        unsigned char stack[2040];
+        unsigned char stack[2032];
 
         struct child_context child;
     } child_b, child_c;
