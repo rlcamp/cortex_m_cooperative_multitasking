@@ -191,7 +191,7 @@ int main(void) {
             tick_blink_prev += blink_rate_in_ticks;
         }
 
-        /* periodically start the other child task, or task it to stop */
+        /* periodically start the other child task, or ask it to stop */
         child_c_should_be_running = !(ticks_now & 128);
 
         if (child_c_should_be_running && !child_is_running(&child_c.child))
