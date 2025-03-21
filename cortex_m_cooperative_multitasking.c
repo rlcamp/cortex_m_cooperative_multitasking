@@ -2,38 +2,28 @@
 #include "cortex_m_cooperative_multitasking.h"
 #include <stddef.h>
 
-/* the below macros are copied and pasted as-is from https://github.com/rlcamp/coroutine
+/* the below macros are derived from https://github.com/rlcamp/coroutine
  and assume a springboard function which takes a single void pointer */
-
-#if __thumb__
-#define SET_LSB_IN_LR_IF_THUMB "orr lr, #1\n"
-#else
-#define SET_LSB_IN_LR_IF_THUMB ""
-#endif
 
 #define BOOTSTRAP_CONTEXT(buf, func) do { \
 register void * _buf asm("r0") = buf; /* ensure the compiler places this where it will be the argument to func */ \
 register void (* _func)(void *) asm("r1") = func; /* ensure the compiler does not place this in a frame pointer register */ \
 asm volatile( \
-"adr lr, 0f\n" /* compute address of end of this block of asm, which will be jumped to when returning to this context */ \
-SET_LSB_IN_LR_IF_THUMB /* handle thumb addressing where the lsb is set if the jump target should remain in thumb mode */ \
-"push {r7, r11, lr}\n" /* save the future pc value as well as possible frame pointers (which are not allowed in the clobber list) */ \
-"mov r5, sp\n" /* grab the current stack pointer... */ \
-"str r5, [%0]\n" /* and save it the context buffer */ \
+"add lr, pc, (0f - 1f) | 1\n" /* compute address of end of this block of asm, which will be jumped to when returning to this context */ \
+"1: push {r7, r11, lr}\n" /* save the future pc value as well as possible frame pointers (which are not allowed in the clobber list) */ \
+"str sp, [%0]\n" /* store the current stack pointer in the context buffer */ \
 "mov sp, %0\n" /* set the stack pointer to the top of the space below the context buffer */ \
 "bx %1\n" /* jump to the child function */ \
-".balign 4\n" /* not sure if this is necessary except on thumb-1 */ \
+".balign 4\n" \
 "0:\n" : "+r"(_buf), "+r"(_func) : : "r2", "r3", "r4", "r5", "r6", "r8", "r9", "r10", "r12", "lr", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15", "cc", "memory"); } while(0)
 
 #define SWAP_CONTEXT(buf) do { \
 register void * _buf asm("r0") = buf; \
 asm volatile( \
-"adr lr, 0f\n" /* compute address of end of this block of asm, which will be jumped to when returning to this context */ \
-SET_LSB_IN_LR_IF_THUMB /* handle thumb addressing where the lsb is set if the jump target should remain in thumb mode */ \
-"push {r7, r11, lr}\n" /* save the future pc value as well as possible frame pointers (which are not allowed in the clobber list) */ \
+"add lr, pc, (0f - 1f) | 1\n" /* compute address of end of this block of asm, which will be jumped to when returning to this context */ \
+"1: push {r7, r11, lr}\n" /* save the future pc value as well as possible frame pointers (which are not allowed in the clobber list) */ \
 "ldr r6, [%0]\n" /* load the saved stack pointer from the context buffer */ \
-"mov r4, sp\n" /* grab the current value of the stack pointer... */ \
-"str r4, [%0]\n" /* and save it in the context buffer */ \
+"str sp, [%0]\n" /* store the current stack pointer in the context buffer */ \
 "mov sp, r6\n" /* restore the previously saved stack pointer */ \
 "pop {r7, r11, pc}\n" /* jump to the previously saved pc value */ \
 ".balign 4\n" \
