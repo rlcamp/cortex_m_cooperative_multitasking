@@ -2,8 +2,7 @@
 #include "cortex_m_cooperative_multitasking.h"
 #include <stddef.h>
 
-/* the below macros are derived from https://github.com/rlcamp/coroutine
- and assume a springboard function which takes a single void pointer */
+/* these macros are derived from the armv7-m path in https://github.com/rlcamp/coroutine */
 
 #define BOOTSTRAP_CONTEXT(buf, func) do { \
 register void * _buf asm("r0") = buf; /* ensure the compiler places this where it will be the argument to func */ \
@@ -29,11 +28,6 @@ asm volatile( \
 ".balign 4\n" \
 "0:\n" : "+r"(_buf) : : "r1", "r2", "r3", "r4", "r5", "r6", "r8", "r9", "r10", "r11", "r12", "lr", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15", "cc", "memory"); } while(0)
 
-/* the following is some logic which builds upon the above context-switching primitives and
- implements cooperative multitasking using a parameter-free yield */
-
-/* this is NULL when in the parent, non-NULL when in a child that will yield back to the
- parent when calling the parameter-free yield. */
 static void * context_of_current_child = NULL;
 
 /* a singly-linked list of active child tasks */
