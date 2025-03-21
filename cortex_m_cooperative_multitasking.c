@@ -10,24 +10,24 @@ register void * _buf asm("r0") = buf; /* ensure the compiler places this where i
 register void (* _func)(void *) asm("r1") = func; /* ensure the compiler does not place this in a frame pointer register */ \
 asm volatile( \
 "add lr, pc, (0f - 1f) | 1\n" /* compute address of end of this block of asm, which will be jumped to when returning to this context */ \
-"1: push {r7, r11, lr}\n" /* save the future pc value as well as possible frame pointers (which are not allowed in the clobber list) */ \
+"1: push {r7, lr}\n" /* save the future pc value as well as possible frame pointer (which is not allowed in the clobber list) */ \
 "str sp, [%0]\n" /* store the current stack pointer in the context buffer */ \
 "mov sp, %0\n" /* set the stack pointer to the top of the space below the context buffer */ \
 "bx %1\n" /* jump to the child function */ \
 ".balign 4\n" \
-"0:\n" : "+r"(_buf), "+r"(_func) : : "r2", "r3", "r4", "r5", "r6", "r8", "r9", "r10", "r12", "lr", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15", "cc", "memory"); } while(0)
+"0:\n" : "+r"(_buf), "+r"(_func) : : "r2", "r3", "r4", "r5", "r6", "r8", "r9", "r10", "r11", "r12", "lr", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15", "cc", "memory"); } while(0)
 
 #define SWAP_CONTEXT(buf) do { \
 register void * _buf asm("r0") = buf; \
 asm volatile( \
 "add lr, pc, (0f - 1f) | 1\n" /* compute address of end of this block of asm, which will be jumped to when returning to this context */ \
-"1: push {r7, r11, lr}\n" /* save the future pc value as well as possible frame pointers (which are not allowed in the clobber list) */ \
+"1: push {r7, lr}\n" /* save the future pc value and possible frame pointer */ \
 "ldr r6, [%0]\n" /* load the saved stack pointer from the context buffer */ \
 "str sp, [%0]\n" /* store the current stack pointer in the context buffer */ \
 "mov sp, r6\n" /* restore the previously saved stack pointer */ \
-"pop {r7, r11, pc}\n" /* jump to the previously saved pc value */ \
+"pop {r7, pc}\n" /* jump to the previously saved pc value */ \
 ".balign 4\n" \
-"0:\n" : "+r"(_buf) : : "r1", "r2", "r3", "r4", "r5", "r6", "r8", "r9", "r10", "r12", "lr", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15", "cc", "memory"); } while(0)
+"0:\n" : "+r"(_buf) : : "r1", "r2", "r3", "r4", "r5", "r6", "r8", "r9", "r10", "r11", "r12", "lr", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15", "cc", "memory"); } while(0)
 
 /* the following is some logic which builds upon the above context-switching primitives and
  implements cooperative multitasking using a parameter-free yield */
