@@ -1,6 +1,6 @@
 # Cortex-M cooperative multitasking
 
-This codebase implements a simple parameter-free `yield()` function which implements cooperative multitasking and low-power idle on ARM Cortex-M4 microcontrollers. It should work as-is on Cortex-M3, and can be adapted to work on Cortex-M0+.
+This codebase implements a simple parameter-free `yield()` function which enables cooperative multitasking and low-power idle on ARM Cortex-M microcontrollers that implement the `wfe` instruction, such as the M3, M4, and M33.
 
 This allows multiple concurrent threads of execution (tasks) to each be evaluated every time the chip wakes up from sleep due to an interrupt, without requiring all application code to be rewritten to use new APIs for existing functionality. Each task can largely pretend it is the only thing running on the chip, and that the `yield()` function acts as if it simply contains `__DSB(); __WFE();`.
 
@@ -16,7 +16,31 @@ Child tasks are started by the main thread on demand. Once started, the main thr
 
 In order to ensure timely response to conditions becoming true, tasks must only call `yield()` in a loop around a condition that will be accompanied by a processor wake. Waiting for a condition not accompanied by a processor wake can delay response to the condition by an extra sleep-wake cycle, where the timing of the sleep-wake cycles is solely determined by conditions being waited upon by other tasks. If no tasks are waiting for interrupt-accompanied conditions, the processor may sleep indefinitely.
 
-If a condition needs to be waited upon that is not accompanied by an interrupt when it becomes true, a call site can loop on `while (!condition) { __SEV(); yield(); }` in order to inhibit the call to WFE within `yield()`, thereby effectively causing the whole chip to spinloop on all waited-for conditions without sleeping. This should be used sparingly due to increased power consumption, but allows other threads to continue to make progress in cases where they would otherwise be blocked indefinitely.
+If a condition needs to be waited upon that is not accompanied by an interrupt when it becomes true, a call site can loop on `while (!condition) { __SEV(); yield(); }` in order to inhibit the single `wfe` within `yield()`, thereby effectively causing the whole chip to spinloop on all waited-for conditions without sleeping. This should be used sparingly due to increased power consumption, but allows other threads to continue to make progress in cases where they would otherwise be blocked indefinitely.
+
+## Why
+
+### Why not use preemptive multitasking
+
+It turns out to be MUCH simpler and more practical to achieve properly low-power idle states while waiting for something to happen, and immediately respond once it does, if each thing doing the waiting can express it as "wake me up whenever anything happens, and I will check whether the thing that happened is what i was waiting for."
+
+Cooperative multitasking allows each piece of code to be written as if it were the only thing running on the microcontroller, with the single change of looping on a `yield()` function whenever one would have looped on `__WFE()` previously.
+
+### Why not use an RTOS
+
+An RTOS exists, in part, to attempt to solve a problem introduced by preemptive multitasking, by moving the logical "wait for X" from application code into OS kernel code. Unfortunately, this requires that all possible things that could have been waited for, and how to wait for them in a power-efficient and low-latency way, need to have been anticipated and implemented by the OS kernel authors.
+
+### Why not do properly nonblocking everything using traditional horrifying inside-out state machines
+
+Because they are extremely brittle and nearly impossible to combine, and when I have implemented data acquisition firmware with this paradigm I ended up saying "no" a lot when people asked for added functionality.
+
+### Why not use protothreads
+
+Protothreads don't have their own call stacks - the resulting code can look superficially similar to proper stackful coroutines, but under the hood they work very differently. Proper stackful coroutines have far fewer restrictions - in particular, protothreads can only `yield` from the top level function in the thread, rather than from within a function called by it (such as `delay()` for example).
+
+### Isn't `delay()` a code smell?
+
+Yes, if it actually blocks other code. It is trivial to implement `delay()` such that it contains a loop on the aforementioned `yield()`, and therefore only blocks the calling task.
 
 ## License
 
