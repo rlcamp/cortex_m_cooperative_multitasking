@@ -79,8 +79,13 @@ __attribute((noreturn)) static void springboard(void * argv) {
 
     child->func();
 
-    /* tell parent not to context switch back to here, and yield one last time */
+    /* tell parent not to context switch back to here */
     child->func = NULL;
+
+    /* make sure other tasks (not just main) get to react to this task ending */
+    asm volatile("sev" :::);
+
+    /* and yield for the final time */
     yield();
 
     /* springboards must never return */
