@@ -20,6 +20,7 @@
 register void * _buf asm("r0") = buf; /* ensure the compiler places this where it will be the argument to func */ \
 register void (* _func)(void *) asm("r1") = func; /* ensure the compiler does not place this in a frame pointer register */ \
 asm volatile( \
+".balign 4\n" /* TODO: determine exactly why we need this, it seems that the pc needs to be 4-byte aligned when we do it */ \
 "add lr, pc, (0f - 1f) | 1\n" /* compute address of end of this block of asm, which will be jumped to when returning to this context */ \
 "1: push {r7, lr}\n" /* save the future pc value as well as possible frame pointer (which is not allowed in the clobber list) */ \
 "str sp, [%0]\n" /* store the current stack pointer in the context buffer */ \
@@ -31,6 +32,7 @@ asm volatile( \
 #define SWAP_CONTEXT(buf) do { \
 register void * _buf asm("r0") = buf; \
 asm volatile( \
+".balign 4\n" \
 "add lr, pc, (0f - 1f) | 1\n" /* compute address of end of this block of asm, which will be jumped to when returning to this context */ \
 "1: push {r7, lr}\n" /* save the future pc value and possible frame pointer */ \
 "ldr r6, [%0]\n" /* load the saved stack pointer from the context buffer */ \
