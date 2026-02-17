@@ -107,6 +107,6 @@ int child_is_running(struct child_context * child) {
     return child->func != NULL;
 }
 
-void * current_task(void) {
-    return current_child->context;
+const struct child_context * current_task(void) {
+    return current_child;
 }
