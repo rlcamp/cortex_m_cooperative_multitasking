@@ -57,14 +57,11 @@ void yield(void) {
         /* when yielding from parent, sleep until the next event (i.e. interrupt) */
         sleep_until_event();
 
-        /* loop over children, yielding to each, and removing any that have finished */
-        for (struct child_context * this = children_head, ** pn = &children_head;
-             this; pn = &this->next, this = this->next) {
-                current_child = this;
-                SWAP_CONTEXT(current_child->context);
-
-                if (!this->func) *pn = this->next;
-            }
+        /* loop over singly-linked list of active tasks, yielding to each */
+        for (struct child_context * this = children_head; this; this = this->next) {
+            current_child = this;
+            SWAP_CONTEXT(current_child->context);
+        }
     }
 }
 
@@ -81,7 +78,12 @@ __attribute((noreturn)) static void springboard(void * argv) {
 
     child->func();
 
-    /* tell parent not to context switch back to here */
+    /* remove self from singly-linked list of running tasks */
+    struct child_context ** prev_next = &children_head;
+    for (struct child_context * this = children_head; this && this != child; this = this->next)
+        prev_next = &this->next;
+    *prev_next = child->next;
+
     child->func = NULL;
 
     /* make sure other tasks (not just main) get to react to this task ending */
@@ -95,14 +97,11 @@ __attribute((noreturn)) static void springboard(void * argv) {
 }
 
 void child_start(struct child_context * child, void (* func)(void)) {
+    child->next = children_head;
+    children_head = child;
+
     child->func = func;
     BOOTSTRAP_CONTEXT(child->context, springboard);
-
-    if (child->func) {
-        /* if child returned without ever yielding, do not add to list */
-        child->next = children_head;
-        children_head = child;
-    }
 }
 
 int child_is_running(struct child_context * child) {
