@@ -72,9 +72,6 @@ __attribute((weak)) void sleep_until_event(void) {
 
 __attribute((noreturn)) static void springboard(void * argv) {
     struct child_context * child = argv;
-    /* set this so that when either parent or child call the parameter-free yield, it
-     can figure out who is calling it and whether to sleep, context switch, or both */
-    current_child = child;
 
     child->func();
 
@@ -101,6 +98,7 @@ void child_start(struct child_context * child, void (* func)(void)) {
     children_head = child;
 
     child->func = func;
+    current_child = child;
     BOOTSTRAP_CONTEXT(child->context, springboard);
 }
 
