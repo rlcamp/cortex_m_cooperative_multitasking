@@ -21,6 +21,9 @@ struct child_context {
 
     /* so that the parent can loop through these in the parameter-free yield() */
     struct child_context * next;
+
+    /* this would be wasted space anyway, allow the caller to use it for diagnostics */
+    unsigned pad;
 };
 
 /* any call site in parent or children can loop on calls to this when waiting for some
