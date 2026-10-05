@@ -73,7 +73,7 @@ __attribute((weak)) void sleep_until_event(void) {
 __attribute((noreturn)) static void springboard(void * argv) {
     struct child_context * child = argv;
 
-    child->func();
+    child->func(child->arg);
 
     /* remove self from singly-linked list of running tasks */
     struct child_context ** prev_next = &children_head;
@@ -93,11 +93,12 @@ __attribute((noreturn)) static void springboard(void * argv) {
     __builtin_unreachable();
 }
 
-void child_start(struct child_context * child, void (* func)(void)) {
+void child_start(struct child_context * child, void (* func)(void *), void * arg) {
     child->next = children_head;
     children_head = child;
 
     child->func = func;
+    child->arg = arg;
     current_child = child;
     BOOTSTRAP_CONTEXT(child->context, springboard);
 }

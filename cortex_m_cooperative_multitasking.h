@@ -17,13 +17,13 @@ struct child_context {
     unsigned char context[4] __attribute((aligned(8)));
 
     /* springboard runs this and then sets it to NULL, which the parent can detect */
-    void (* volatile func)(void);
+    void (* volatile func)(void *);
+
+    /* parent can use this to pass an argument to child */
+    void * arg;
 
     /* so that the parent can loop through these in the parameter-free yield() */
     struct child_context * next;
-
-    /* this would be wasted space anyway, allow the caller to use it for diagnostics */
-    unsigned pad;
 };
 
 /* any call site in parent or children can loop on calls to this when waiting for some
@@ -36,7 +36,7 @@ struct child_context {
 void yield(void);
 
 /* parent calls this to start a child */
-void child_start(struct child_context * child, void (* func)(void));
+void child_start(struct child_context * child, void (* func)(void *), void * arg);
 
 /* parent can call this to determine whether an already-started child is still running */
 int child_is_running(struct child_context * child);
